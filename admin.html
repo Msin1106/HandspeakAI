@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>HandSpeak Admin – Quyền & Tiến trình</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#020617;--panel:#020617;--panel2:#020617;
+      --ink:#e5e7eb;--muted:#9ca3af;--acc:#22c55e;--ring:#1f2937;--danger:#f97373;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      min-height:100vh;
+      background:radial-gradient(circle at top,#172554 0,#020617 60%);
+      font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink);
+      padding:14px;
+    }
+    h1{font-size:1.7rem;font-weight:800;font-style:italic;margin-bottom:4px;}
+    .sub{font-size:.9rem;color:var(--muted);margin-bottom:10px;}
+    main{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;}
+    .panel{
+      background:rgba(15,23,42,.95);
+      border-radius:16px;
+      border:1px solid var(--ring);
+      padding:10px 12px;
+    }
+    #summary{flex:1 1 260px;}
+    #logs{flex:2 1 420px;}
+    h2{font-size:1.05rem;margin-bottom:6px;}
+    label{font-size:.82rem;color:var(--muted);display:block;margin-top:4px;margin-bottom:2px;}
+    select,input[type=date]{
+      width:100%;padding:5px 8px;border-radius:8px;border:1px solid var(--ring);
+      background:#020617;color:var(--ink);font-size:.9rem;
+    }
+    button{
+      font-size:.85rem;font-family:inherit;
+      padding:6px 10px;border-radius:999px;border:1px solid var(--ring);
+      background:#020617;color:var(--ink);cursor:pointer;
+    }
+    button.primary{background:var(--acc);color:#022c22;border-color:#16a34a;}
+    button.danger{background:var(--danger);color:#450a0a;border-color:#b91c1c;}
+    .hint{font-size:.8rem;color:var(--muted);margin-top:4px;}
+    table{
+      width:100%;border-collapse:collapse;font-size:.82rem;margin-top:6px;
+    }
+    th,td{border-bottom:1px solid #1f2937;padding:4px 6px;text-align:left;}
+    th{color:#9ca3af;font-weight:500;background:#020617;}
+    tr:hover{background:#020617;}
+    .tag{
+      display:inline-flex;align-items:center;gap:4px;
+      padding:2px 6px;border-radius:999px;border:1px solid #1f2937;
+      font-size:.75rem;color:#e5e7eb;background:#020617;margin-right:4px;margin-top:2px;
+    }
+    .tag.red{border-color:#b91c1c;color:#fecaca;}
+    .tag.green{border-color:#16a34a;color:#bbf7d0;}
+    .pill-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+    .pill{
+      padding:4px 8px;border-radius:999px;border:1px solid #1f2937;
+      background:#020617;font-size:.78rem;cursor:pointer;
+    }
+    .pill.active{background:#22c55e33;border-color:#22c55e;color:#bbf7d0;}
+    .scroll{
+      border-radius:12px;border:1px solid #1f2937;
+      background:#020617;height:280px;overflow:auto;
+      margin-top:6px;
+    }
+    .logline{padding:4px 6px;border-bottom:1px solid #030712;font-family:ui-monospace,Menlo,Consolas,monospace;}
+    .logline:nth-child(even){background:#020617;}
+    footer{margin-top:10px;font-size:.8rem;color:#6b7280;text-align:center;}
+    @media (max-width:800px){
+      main{flex-direction:column;}
+    }
+  </style>
+</head>
+<body>
+  <h1>HandSpeak Admin</h1>
+  <div class="sub">
+    Trang quản trị nhẹ, chỉ đọc dữ liệu từ <code>localStorage</code> của Handspeak: người dùng, phiên luyện tập,
+    và quyền thao tác. 
+  </div>
+
+  <main>
+    <section id="summary" class="panel">
+      <h2>Tổng quan người dùng</h2>
+      <div id="userBadges"></div>
+
+      <label for="userSelect">Chọn người dùng</label>
+      <select id="userSelect"></select>
+
+      <label for="roleSelect">Vai trò</label>
+      <select id="roleSelect">
+        <option value="student">Học sinh</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <label for="allowSelect">Quyền thao tác</label>
+      <select id="allowSelect">
+        <option value="allow">Cho phép dùng chức năng thực hành</option>
+        <option value="block">Khoá – chỉ xem demo</option>
+      </select>
+
+      <div class="pill-row">
+        <button id="btnSavePerm" class="primary">Lưu quyền</button>
+        <button id="btnResetPerm" class="danger">Xoá quyền tùy chỉnh</button>
+      </div>
+
+      <p class="hint" id="permStatus">
+        Chọn một người dùng ở trên để xem / chỉnh quyền. Thông tin lưu trong <code>hs_permissions</code> của trình duyệt.
+      </p>
+
+      <hr style="margin:10px 0;border-color:#1f2937;opacity:.6;">
+
+      <h2>Lọc phiên luyện tập</h2>
+      <label for="fromDate">Từ ngày</label>
+      <input type="date" id="fromDate">
+      <label for="toDate">Đến ngày</label>
+      <input type="date" id="toDate">
+      <button id="btnApply" style="margin-top:6px;">Áp dụng lọc</button>
+
+      <p class="hint" id="summaryText"></p>
+    </section>
+
+    <section id="logs" class="panel">
+      <h2>Nhật ký luyện tập (hs_progress)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Thời gian</th>
+            <th>User</th>
+            <th>Kiểu</th>
+            <th>Nhãn</th>
+            <th>Thời gian giữ (s)</th>
+            <th>OK?</th>
+          </tr>
+        </thead>
+        <tbody id="logTable"></tbody>
+      </table>
+
+      <div class="scroll" id="rawLog"></div>
+    </section>
+  </main>
+
+  <footer>HandSpeak Admin – chỉ dùng nội bộ để kiểm tra dữ liệu demo, không phải hệ thống đăng nhập thực.</footer>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+
+  function readJSON(key, fallback){
+    try{
+      const raw = localStorage.getItem(key);
+      if(!raw) return fallback;
+      return JSON.parse(raw);
+    }catch(e){return fallback;}
+  }
+
+  const progress = readJSON("hs_progress", []);
+  const permissions = readJSON("hs_permissions", {});
+  const lastAuth = readJSON("hs_auth", null); // chỉ 1 user gần nhất
+
+  // Tập hợp danh sách userId
+  const usersMap = new Map(); // id -> {id,count,lastTs}
+  progress.forEach(s=>{
+    const id = s.userId || "_guest";
+    const info = usersMap.get(id) || {id, count:0, lastTs:0};
+    info.count++;
+    if(s.ts && s.ts>info.lastTs) info.lastTs = s.ts;
+    usersMap.set(id, info);
+  });
+  if(lastAuth && lastAuth.id && !usersMap.has(lastAuth.id)){
+    usersMap.set(lastAuth.id, {id:lastAuth.id, count:0, lastTs:Date.now()});
+  }
+  if(!usersMap.has("_guest")){
+    usersMap.set("_guest", {id:"_guest",count:0,lastTs:0});
+  }
+
+  const userBadges = $("userBadges");
+  const userSelect = $("userSelect");
+  userSelect.innerHTML = "";
+
+  [...usersMap.values()].forEach(info=>{
+    const badge = document.createElement("div");
+    const perm = permissions[info.id];
+    const role = perm?.role || "student";
+    const allowed = perm?.allowed !== false;
+    badge.className = "tag " + (allowed ? "green" : "red");
+    badge.textContent = `${info.id} • ${info.count} lần luyện`;
+    userBadges.appendChild(badge);
+
+    const opt = document.createElement("option");
+    opt.value = info.id;
+    opt.textContent = info.id;
+    userSelect.appendChild(opt);
+  });
+
+  function loadPermissionFor(id){
+    const perm = permissions[id] || {};
+    $("roleSelect").value = perm.role || "student";
+    $("allowSelect").value = (perm.allowed === false) ? "block" : "allow";
+    $("permStatus").textContent =
+      `Quyền hiện tại của ${id}: vai trò ${(perm.role||"student")}, ` +
+      (perm.allowed === false ? "ĐANG BỊ KHOÁ" : "được phép thực hành.");
+  }
+  if(userSelect.value){
+    loadPermissionFor(userSelect.value);
+  }
+
+  userSelect.addEventListener("change", ()=>loadPermissionFor(userSelect.value));
+
+  $("btnSavePerm").addEventListener("click", ()=>{
+    const id = userSelect.value;
+    if(!id){alert("Chưa chọn user");return;}
+    const role = $("roleSelect").value;
+    const allow = $("allowSelect").value === "allow";
+    permissions[id] = {role, allowed:allow};
+    localStorage.setItem("hs_permissions", JSON.stringify(permissions));
+    loadPermissionFor(id);
+    alert("Đã lưu quyền vào localStorage (hs_permissions).");
+  });
+
+  $("btnResetPerm").addEventListener("click", ()=>{
+    const id = userSelect.value;
+    if(!id) return;
+    delete permissions[id];
+    localStorage.setItem("hs_permissions", JSON.stringify(permissions));
+    loadPermissionFor(id);
+    alert("Đã xoá quyền tuỳ chỉnh cho " + id);
+  });
+
+  function inRange(ts, fromStr, toStr){
+    if(!ts) return false;
+    const d = new Date(ts);
+    if(fromStr){
+      const from = new Date(fromStr + "T00:00:00");
+      if(d < from) return false;
+    }
+    if(toStr){
+      const to = new Date(toStr + "T23:59:59");
+      if(d > to) return false;
+    }
+    return true;
+  }
+
+  function renderLogs(){
+    const from = $("fromDate").value;
+    const to   = $("toDate").value;
+    const idFilter = userSelect.value || "";
+
+    const tbody = $("logTable");
+    tbody.innerHTML = "";
+    const raw = $("rawLog");
+    raw.innerHTML = "";
+
+    let total = 0;
+    progress.forEach(s=>{
+      const uid = s.userId || "_guest";
+      if(idFilter && uid !== idFilter) return;
+      if(!inRange(s.ts, from, to)) return;
+
+      total++;
+      const tr = document.createElement("tr");
+      const time = s.ts ? new Date(s.ts).toLocaleString() : "";
+      const dur = s.durationMs ? (s.durationMs/1000).toFixed(1) : "";
+      tr.innerHTML = `
+        <td>${time}</td>
+        <td>${uid}</td>
+        <td>${s.gestureType||""}</td>
+        <td>${s.label||""}</td>
+        <td>${dur}</td>
+        <td>${s.success ? "✓" : ""}</td>
+      `;
+      tbody.appendChild(tr);
+
+      const line = document.createElement("div");
+      line.className = "logline";
+      line.textContent = JSON.stringify(s);
+      raw.appendChild(line);
+    });
+
+    $("summaryText").textContent =
+      `Tìm thấy ${total} phiên luyện tập thoả điều kiện lọc. (Tổng trong bộ nhớ: ${progress.length}).`;
+  }
+
+  $("btnApply").addEventListener("click", renderLogs);
+  userSelect.addEventListener("change", renderLogs);
+
+  // Khởi tạo ban đầu
+  renderLogs();
+})();
+</script>
+</body>
+</html>
